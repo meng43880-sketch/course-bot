@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+course_bot.db
+.venv/
+venv/
