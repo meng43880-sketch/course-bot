@@ -44,10 +44,34 @@ def get_course_description():
         "• Бессрочный после оплаты"
     )
 
+def get_tariff_description(tariff):
+    standard_price = get_setting("course_price") or "1990"
+    premium_price = get_setting("premium_price") or "2990"
+    if tariff == "premium":
+        return (
+            f"💎 **Тариф «Премиум» — {premium_price} ₽**\n\n"
+            "✅ Всё из тарифа «Стандарт»\n"
+            "✅ Личный разбор ошибок\n"
+            "✅ Приоритетная поддержка\n"
+            "✅ Экзамен-тренажёр с ответами\n\n"
+            "Доступ навсегда после оплаты."
+        )
+    return (
+        f"🔥 **Тариф «Стандарт» — {standard_price} ₽**\n\n"
+        "✅ 50+ видеоуроков\n"
+        "✅ 1000+ тестовых заданий\n"
+        "✅ Разбор реальных билетов\n"
+        "✅ Доступ навсегда\n\n"
+        "Оплата и доступ — в мини‑аппе."
+    )
+
+def get_tariff_name(tariff):
+    return "Премиум" if tariff == "premium" else "Стандарт"
+
 def get_faq_answers():
     standard_price = get_setting("course_price") or "1990"
     premium_price = get_setting("premium_price") or "2990"
-    
+
     return {
         "faq_price": f"💰 **Стоимость:**\n• Стандарт: {standard_price} ₽\n• Премиум: {premium_price} ₽",
         "faq_whats_included": "📚 **Что входит:**\n• 50+ видеоуроков\n• 1000+ тестов\n• Разбор билетов\n• Советы инструкторов",
@@ -75,7 +99,9 @@ async def start_command(message: types.Message, state: FSMContext):
     await state.set_state(CourseStates.main_menu)
     await message.answer(
         f"🚗 **{get_setting('course_name') or 'Курс ПДД'}**\n\n"
-        "Всё необходимое для подготовки — в одном месте.",
+        "Привет! 👋\n"
+        "Всё необходимое для подготовки — в одном месте.\n\n"
+        "Курс доступен после оплаты — нажми кнопку ниже, чтобы выбрать тариф в мини‑аппе.",
         reply_markup=main_menu_keyboard(paid),
         parse_mode="Markdown"
     )
@@ -187,8 +213,215 @@ async def select_tariff(callback: types.CallbackQuery, state: FSMContext):
     )
     await callback.answer()
 
+@router.callback_query(F.data == "tariffs")
+async def tariffs_list(callback: types.CallbackQuery, state: FSMContext):
+    if is_paid(callback.from_user.id):
+        await callback.answer("У вас уже есть доступ к курсу! ✅", show_alert=True)
+        return
+
+    await state.set_state(CourseStates.tariffs)
+    standard_price = get_setting("course_price") or "1990"
+    premium_price = get_setting("premium_price") or "2990"
+
+    await callback.message.edit_text(
+        "🔥 **Выбери вариант доступа:**\n\n"
+        f"🔥 Стандарт — {standard_price} ₽\n"
+        f"💎 Премиум — {premium_price} ₽",
+        reply_markup=tariffs_keyboard(standard_price, premium_price),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+# ============ ОПЛАТА ЧЕРЕЗ МИНИ-АПП ============
+
+@router.callback_query(F.data.startswith("pay_"))
+async def pay_via_mini_app(callback: types.CallbackQuery, state: FSMContext):
+    """Старый callback на всякий случай: перенаправляем в мини-апп."""
+    if is_paid(callback.from_user.id):
+        await callback.answer("У вас уже есть доступ к курсу! ✅", show_alert=True)
+        return
+
+    tariff = callback.data.replace("pay_", "")
+    price = int(get_setting("course_price") or 1990) if tariff == "standard" else int(get_setting("premium_price") or 2990)
+    await state.set_state(CourseStates.payment)
+    await callback.message.edit_text(
+        f"💳 **Оплата через мини‑апп**\n\n"
+        f"Тариф: {get_tariff_name(tariff)}\n"
+        f"Сумма: {price} ₽\n\n"
+        "Нажми кнопку ниже — откроется мини‑апп с оплатой.",
+        reply_markup=buy_course_keyboard(tariff),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+# ============ FAQ ============
+
+@router.callback_query(F.data == "faq")
+async def faq(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(CourseStates.faq)
+    await callback.message.edit_text(
+        "❓ **Частые вопросы**\n\nВыбери интересующий вопрос:",
+        reply_markup=faq_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("faq_"))
+async def faq_item(callback: types.CallbackQuery, state: FSMContext):
+    answer = get_faq_answers().get(callback.data)
+    if not answer:
+        await callback.answer()
+        return
+    await callback.message.edit_text(
+        answer,
+        reply_markup=faq_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+# ============ ПОДДЕРЖКА ============
+
+@router.callback_query(F.data == "support")
+async def support(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(CourseStates.support)
+    support_link = get_setting("support_link") or "https://t.me/your_support_bot"
+    await callback.message.edit_text(
+        "💬 **Поддержка**\n\n"
+        "Если возникли вопросы — напиши нам, поможем!",
+        reply_markup=support_keyboard(support_link),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+# ============ ОТКРЫТЬ КУРС ============
+
+@router.callback_query(F.data == "open_course")
+async def open_course(callback: types.CallbackQuery, state: FSMContext):
+    if not is_paid(callback.from_user.id):
+        await callback.answer("Доступ открывается после оплаты 😉", show_alert=True)
+        return
+
+    await state.set_state(CourseStates.access_granted)
+    await callback.message.edit_text(
+        "📚 **Твой курс**\n\n"
+        "Кнопка ниже откроет обучающий мини‑апп со всеми материалами.",
+        reply_markup=open_course_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+# ============ МОЙ ДОСТУП ============
+
+@router.callback_query(F.data == "my_access")
+async def my_access(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+
+    if not is_paid(user_id):
+        await state.set_state(CourseStates.tariffs)
+        await callback.message.edit_text(
+            "🔒 **У тебя пока нет доступа к курсу.**\n\n"
+            "Курс открывается сразу после оплаты в мини‑аппе.\n\n"
+            "Выбери тариф и оплати — доступ появится мгновенно.",
+            reply_markup=buy_course_keyboard(),
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+        return
+
+    await state.set_state(CourseStates.my_access)
+    await callback.message.edit_text(
+        "👤 **Мой доступ**\n\n"
+        "✅ Доступ к курсу активен!\n"
+        "Кнопка ниже откроет мини‑апп с курсом.",
+        reply_markup=open_course_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "restore_access")
+async def restore_access(callback: types.CallbackQuery, state: FSMContext):
+    if not is_paid(callback.from_user.id):
+        await callback.answer("Сначала оплати курс 😉", show_alert=True)
+        return
+    await callback.message.edit_text(
+        "✅ **Доступ активен** — твой курс ниже 👇",
+        reply_markup=open_course_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "get_access_link")
+async def get_access_link(callback: types.CallbackQuery, state: FSMContext):
+    if not is_paid(callback.from_user.id):
+        await callback.answer("Сначала оплати курс 😉", show_alert=True)
+        return
+    await state.set_state(CourseStates.access_granted)
+    await callback.message.edit_text(
+        "🔐 **Вот твой курс**\n\nНажми кнопку, чтобы открыть обучающий мини‑апп.",
+        reply_markup=open_course_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+# ============ МОЯ ПОКУПКА ============
+
+@router.callback_query(F.data == "my_purchase")
+async def my_purchase(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+
+    if not is_paid(user_id):
+        await state.set_state(CourseStates.tariffs)
+        await callback.message.edit_text(
+            "🧾 **Покупок пока нет.**\n\n"
+            "Оплати курс в мини‑аппе, и здесь появится вся информация о покупке.",
+            reply_markup=buy_course_keyboard(),
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+        return
+
+    await state.set_state(CourseStates.my_purchase)
+    tariff = get_user_tariff(user_id)
+    price = get_user_price(user_id)
+    purchase_date = get_purchase_date(user_id)
+    tariff_name = get_tariff_name(tariff or "standard")
+
+    await callback.message.edit_text(
+        "🧾 **Моя покупка**\n\n"
+        f"💎 Тариф: {tariff_name}\n"
+        f"💰 Сумма: {price} ₽\n"
+        f"📅 Дата: {purchase_date or 'неизвестна'}\n"
+        f"🎁 Статус: оплачено ✅",
+        reply_markup=my_purchase_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "get_check")
+async def get_check(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    if not is_paid(user_id):
+        await callback.answer("Сначала оплати курс 😉", show_alert=True)
+        return
+
+    tariff = get_user_tariff(user_id)
+    price = get_user_price(user_id)
+    purchase_date = get_purchase_date(user_id)
+
+    await callback.message.edit_text(
+        "🧾 **Чек об оплате**\n\n"
+        "Учебный курс «ПДД 2026»\n"
+        f"Тариф: {get_tariff_name(tariff or 'standard')}\n"
+        f"Сумма: {price} ₽\n"
+        f"Дата оплаты: {purchase_date or 'неизвестна'}\n"
+        f"Способ оплаты: мини‑апп\n\n"
+        "_Это демо-чек. При подключении реальной оплаты здесь будет фискальный чек._",
+        reply_markup=my_purchase_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
 # ... (остальная пользовательская часть, включая оплату - как в предыдущей версии)
-# Для краткости опускаем, но она есть в полной версии файла
 
 # ============================================
 # ===== НАПОМИНАНИЯ =====

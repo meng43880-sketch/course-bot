@@ -16,5 +16,9 @@ PREMIUM_PRICE = 2990
 CHANNEL_LINK = "https://t.me/your_course_channel"
 SUPPORT_LINK = "https://t.me/your_support_bot"
 
+# URL Telegram Mini App (кнопки WebApp ведут в него)
+# Удобно использовать как: "<MINI_APP_URL>#/paywall" или "<MINI_APP_URL>#/account"
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://your-mini-app-url.example").rstrip("/")
+
 # Настройки напоминаний
 REMINDER_DAYS = 7  # Через сколько дней напоминать

@@ -8,21 +8,16 @@ from aiohttp import web
 from config import BOT_TOKEN
 from database import init_db
 from handlers import router, start_reminder_scheduler
+from api import create_web_app
 
 PORT = int(os.getenv("PORT", 10000))
 
-# HTTP сервер для health-check (чтобы UptimeRobot не давал Render-у усыпить бота)
-async def handle_health(request):
-    return web.Response(text="ok")
-
 async def run_http_server():
-    app = web.Application()
-    app.router.add_get("/", handle_health)
-    app.router.add_get("/health", handle_health)
+    app = create_web_app()
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
-    print(f"🌐 HTTP health-check server запущен на порту {PORT}")
+    print(f"🌐 HTTP-сервер (health-check + API мини-аппа) запущен на порту {PORT}")
 
 async def main():
     # Создаём базу данных

@@ -1,28 +1,55 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
+from config import MINI_APP_URL
+
+# ===== МИНИ-АПП =====
+def open_course_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📚 Открыть курс", web_app=WebAppInfo(url=MINI_APP_URL))],
+        [InlineKeyboardButton(text="👤 Личный кабинет", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/account"))],
+        [InlineKeyboardButton(text="⬅️ В меню", callback_data="back_to_main")]
+    ])
+
+def buy_course_keyboard(tariff=None):
+    url = f"{MINI_APP_URL}#/paywall"
+    if tariff:
+        url += f"?tariff={tariff}"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Оплатить в мини‑аппе", web_app=WebAppInfo(url=url))],
+        [InlineKeyboardButton(text="👤 Личный кабинет", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/account"))],
+        [InlineKeyboardButton(text="⬅️ В меню", callback_data="back_to_main")]
+    ])
+
+def account_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👤 Открыть личный кабинет", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/account"))],
+        [InlineKeyboardButton(text="💬 Поддержка", callback_data="support")],
+        [InlineKeyboardButton(text="⬅️ В меню", callback_data="back_to_main")]
+    ])
 
 # ===== ГЛАВНОЕ МЕНЮ =====
 def main_menu_keyboard(is_paid=False):
     if is_paid:
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📚 Открыть курс", callback_data="open_course")],
-            [InlineKeyboardButton(text="👤 Мой доступ", callback_data="my_access")],
+            [InlineKeyboardButton(text="📚 Открыть курс", web_app=WebAppInfo(url=MINI_APP_URL))],
+            [InlineKeyboardButton(text="👤 Личный кабинет", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/account"))],
             [InlineKeyboardButton(text="🧾 Моя покупка", callback_data="my_purchase")],
             [InlineKeyboardButton(text="💬 Поддержка", callback_data="support")],
             [InlineKeyboardButton(text="❓ Вопросы", callback_data="faq")]
         ])
     else:
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 Получить доступ", callback_data="get_access")],
+            [InlineKeyboardButton(text="🚀 Купить доступ к курсу", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/paywall"))],
+            [InlineKeyboardButton(text="👤 Личный кабинет", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/account"))],
             [InlineKeyboardButton(text="📚 О курсе", callback_data="about_course")],
             [InlineKeyboardButton(text="🎁 Бесплатно", callback_data="free_material")],
-            [InlineKeyboardButton(text="❓ Вопросы", callback_data="faq")],
-            [InlineKeyboardButton(text="💬 Поддержка", callback_data="support")]
+            [InlineKeyboardButton(text="❓ Вопросы", callback_data="faq")]
         ])
 
 # ===== О КУРСЕ =====
 def about_course_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🚀 Получить доступ", callback_data="get_access")],
+        [InlineKeyboardButton(text="🚀 Купить доступ", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/paywall"))],
         [InlineKeyboardButton(text="🎁 Посмотреть пример", callback_data="free_example")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_main")]
     ])
@@ -32,13 +59,13 @@ def free_material_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="▶️ Получить бесплатный разбор", callback_data="get_free_material")],
         [InlineKeyboardButton(text="📚 О курсе", callback_data="about_course")],
-        [InlineKeyboardButton(text="🚀 Получить доступ", callback_data="get_access")],
+        [InlineKeyboardButton(text="🚀 Купить доступ", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/paywall"))],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_main")]
     ])
 
 def after_free_material_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🚀 Перейти к полному курсу", callback_data="get_access")],
+        [InlineKeyboardButton(text="🚀 Перейти к полному курсу", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/paywall"))],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="free_material")]
     ])
 
@@ -53,7 +80,7 @@ def tariffs_keyboard(standard_price, premium_price):
 
 def tariff_selected_keyboard(tariff, price):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"💳 Оплатить {price} ₽", callback_data=f"pay_{tariff}")],
+        [InlineKeyboardButton(text=f"💳 Оплатить {price} ₽", web_app=WebAppInfo(url=f"{MINI_APP_URL}#/paywall?tariff={tariff}"))],
         [InlineKeyboardButton(text="⬅️ Выбрать другой тариф", callback_data="tariffs")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_main")]
     ])

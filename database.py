@@ -89,6 +89,20 @@ def add_user(user_id, username=None, full_name=None):
     conn.commit()
     conn.close()
 
+def update_profile(user_id, username=None, full_name=None):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO users (user_id, username, full_name, last_activity) VALUES (?, ?, ?, ?)",
+        (user_id, username, full_name, datetime.now().isoformat())
+    )
+    cur.execute(
+        "UPDATE users SET username = COALESCE(?, username), full_name = COALESCE(?, full_name), last_activity = ? WHERE user_id = ?",
+        (username, full_name, datetime.now().isoformat(), user_id)
+    )
+    conn.commit()
+    conn.close()
+
 def mark_paid(user_id, tariff, price):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
